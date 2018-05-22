@@ -14,7 +14,7 @@ public class HtmlUrlExtractorTest {
     public void extractUrlsTest() throws IOException {
         var urlExtractor = new JsoupHtmlUrlExtractor();
 
-        InputStream inputStream = getClass().getClassLoader().getResourceAsStream("github-main.html");
+        InputStream inputStream = getClass().getClassLoader().getResourceAsStream("html/github-main.html");
         String html = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
 
         List<String> urls = urlExtractor.extract(html, "https://github.com");
