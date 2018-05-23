@@ -20,7 +20,9 @@ public class Main {
             logger.error("Can't load properties from {}", configName);
         }
 
-        var crawler = new Crawler(new Config(properties), new JsoupHtmlUrlExtractor());
+        Config config = new Config(properties);
+        logger.info("Start work with parameters: \n{}", config);
+        var crawler = new Crawler(config, new JsoupHtmlUrlExtractor());
 
         crawler.run();
 

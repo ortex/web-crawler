@@ -35,4 +35,17 @@ public class Config {
         percentExceptionsToStop = Integer.parseInt(properties.getProperty("crawler.percentExceptionsToStop", "10"));
     }
 
+    @Override
+    public String toString() {
+        return "startUrl='" + startUrl + "'\n" +
+                "clientMaxConnections=" + clientMaxConnections + "\n" +
+                "clientConnectTimeoutMillis=" + clientConnectTimeoutMillis + "\n" +
+                "clientReadTimeoutMillis=" + clientReadTimeoutMillis + "\n" +
+                "clientRequestTimeoutMillis=" + clientRequestTimeoutMillis + "\n" +
+                "clientIoThreadCount=" + clientIoThreadCount + "\n" +
+                "parserPoolSize=" + parserPoolSize + "\n" +
+                "percent5xxToStop=" + percent5xxToStop + "\n" +
+                "percentExceptionsToStop=" + percentExceptionsToStop + "\n"
+                ;
+    }
 }
