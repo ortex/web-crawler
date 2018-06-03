@@ -11,6 +11,7 @@ import ru.ortex.crawler.util.UrlUtils;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Crawler {
     private static final Logger logger = LogManager.getLogger(Crawler.class);
@@ -26,7 +27,8 @@ public class Crawler {
     private final int percent5xxToStop;
     private final int percentExceptionsToStop;
     private final HtmlUrlExtractor urlExtractor;
-    private final Optional<Semaphore> throttler;
+    private final int maxRequestsInProgress;
+    private final AtomicInteger inProgress = new AtomicInteger();
 
     private long timeStartMillis;
 
@@ -40,7 +42,6 @@ public class Crawler {
                 .setReadTimeout(config.clientReadTimeoutMillis)
                 .setRequestTimeout(config.clientRequestTimeoutMillis)
                 .setThreadPoolName("http-client")
-                .setMaxConnections(config.clientMaxConnections)
         );
 
         var threadFactory = new NamedThreadFactory("html-parser");
@@ -50,12 +51,7 @@ public class Crawler {
         percentExceptionsToStop = config.percentExceptionsToStop;
 
         this.urlExtractor = urlExtractor;
-
-        if (client.getConfig().getMaxConnections() != -1) {
-            throttler = Optional.of(new Semaphore(client.getConfig().getMaxConnections()));
-        } else {
-            throttler = Optional.empty();
-        }
+        this.maxRequestsInProgress = config.maxRequestsInProgress;
     }
 
     public void run() {
@@ -66,8 +62,11 @@ public class Crawler {
                 continue;
             }
 
-            throttler.ifPresent(sem -> Exceptions.uncheck(sem::acquire));
-
+            if (maxRequestsInProgress != -1 && inProgress.get() >= maxRequestsInProgress) {
+                Exceptions.uncheck(() -> Thread.sleep(25));
+                continue;
+            }
+            inProgress.incrementAndGet();
             visitedUrls.add(url);
 
             try {
@@ -92,13 +91,12 @@ public class Crawler {
                 .execute()
                 .toCompletableFuture()
                 .exceptionally(th -> {
-
                     logger.error("request error " + url, th);
                     exceptionallyUrls.add(url);
                     return null;
                 })
                 .thenAcceptAsync(response -> {
-                    throttler.ifPresent(Semaphore::release);
+                    inProgress.decrementAndGet();
                     if (response == null) {
                         return;
                     }
@@ -130,9 +128,8 @@ public class Crawler {
     }
 
     private boolean shouldStop() {
-        var maxConnections = client.getConfig().getMaxConnections();
-        var hasReqInProgress = throttler.map(sem -> sem.availablePermits() == maxConnections).orElse(false);
-        var crawledWholeSite = urls.isEmpty() && hasReqInProgress && executor.getActiveCount() == 0 && executor.getQueue().isEmpty();
+        var hasReqInProgress = inProgress.get() != 0;
+        var crawledWholeSite = urls.isEmpty() && !hasReqInProgress && executor.getActiveCount() == 0 && executor.getQueue().isEmpty();
 
         if (crawledWholeSite) {
             logger.info("End working. Crawled whole site.");

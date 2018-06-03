@@ -6,11 +6,9 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="org.asynchttpclient" level="info">
-            <AppenderRef ref="Console"/>
-        </Logger>
-        <Root level="trace">
+        <Root level="info">
             <AppenderRef ref="Console"/>
         </Root>
+        <Logger name="ru.ortex.crawler" level="trace"/>
     </Loggers>
 </Configuration>
